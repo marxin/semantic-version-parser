@@ -168,6 +168,7 @@ impl FromStr for SemVer {
         let mut suffix_version = None;
         if parts.len() >= 4 {
             suffix_version = Some(parts[3].parse::<i32>().unwrap());
+            parts.remove(3);
 
             // Make a default suffix name "P" if the is not any.
             if suffix_part.is_none() {
