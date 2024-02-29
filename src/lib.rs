@@ -4,13 +4,13 @@ use strum_macros::EnumString;
 
 #[derive(Debug, PartialEq, Eq, EnumString, strum_macros::Display)]
 #[strum(serialize_all = "lowercase", ascii_case_insensitive)]
-enum SemanticVersionPrefix {
+enum SemVerPrefix {
     V,
 }
 
 #[derive(Debug, PartialEq, Eq, EnumString, strum_macros::Display)]
 #[strum(serialize_all = "lowercase", ascii_case_insensitive)]
-enum SemanticVersionSuffix {
+enum SemVerSuffix {
     Dev,
     Patch,
     P,
@@ -25,25 +25,25 @@ enum SemanticVersionSuffix {
 // FIXME: technically "dev44" should not be supported
 
 #[derive(Debug, PartialEq, Eq)]
-struct SemanticVersionPair {
-    suffix: SemanticVersionSuffix,
+struct SemVerPair {
+    suffix: SemVerSuffix,
     version: Option<i32>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct SemanticVersion {
-    prefix: Option<SemanticVersionPrefix>,
+struct SemVer {
+    prefix: Option<SemVerPrefix>,
     major: i32,
     minor: i32,
     patch: i32,
-    suffix: Option<SemanticVersionPair>,
+    suffix: Option<SemVerPair>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct ParseSemanticVersionError;
+struct ParseSemVerError;
 
-impl FromStr for SemanticVersion {
-    type Err = ParseSemanticVersionError;
+impl FromStr for SemVer {
+    type Err = ParseSemVerError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut parts = s
@@ -51,12 +51,12 @@ impl FromStr for SemanticVersion {
             .flat_map(split_alpha_and_number)
             .collect_vec();
         if parts.is_empty() {
-            return Err(ParseSemanticVersionError);
+            return Err(ParseSemVerError);
         }
 
         // 1) Parse the prefix component, if any.
 
-        let prefix = SemanticVersionPrefix::from_str(parts[0]).ok();
+        let prefix = SemVerPrefix::from_str(parts[0]).ok();
 
         // support: release-2022-02-09
         if prefix.is_some() || parts[0] == "release" {
@@ -64,13 +64,13 @@ impl FromStr for SemanticVersion {
         }
 
         if parts.len() < 3 {
-            return Err(ParseSemanticVersionError);
+            return Err(ParseSemVerError);
         }
 
         // 2) Parse the suffix component, if any present.
         let mut suffix_part = None;
         if parts.len() >= 4 {
-            suffix_part = SemanticVersionSuffix::from_str(parts[3]).ok();
+            suffix_part = SemVerSuffix::from_str(parts[3]).ok();
             if suffix_part.is_some() {
                 parts.remove(3);
             }
@@ -88,10 +88,10 @@ impl FromStr for SemanticVersion {
 
             // Make a default suffix name "P" if the is not any.
             if suffix_part.is_none() {
-                suffix_part = Some(SemanticVersionSuffix::P);
+                suffix_part = Some(SemVerSuffix::P);
             }
         }
-        let suffix = suffix_part.map(|sp| SemanticVersionPair {
+        let suffix = suffix_part.map(|sp| SemVerPair {
             suffix: sp,
             version: suffix_version,
         });
@@ -103,7 +103,7 @@ impl FromStr for SemanticVersion {
             .map(|p| p.parse::<i32>().unwrap())
             .collect_vec();
 
-        Ok(SemanticVersion {
+        Ok(SemVer {
             major: integer_parts[0],
             minor: integer_parts[1],
             patch: integer_parts[2],
@@ -130,34 +130,19 @@ mod tests {
 
     #[test]
     fn semantic_version_prefix_parsing() {
-        assert_eq!(
-            SemanticVersionPrefix::from_str("V"),
-            Ok(SemanticVersionPrefix::V)
-        );
-        assert_eq!(
-            SemanticVersionPrefix::from_str("v"),
-            Ok(SemanticVersionPrefix::V)
-        );
-        assert!(SemanticVersionPrefix::from_str("RC").is_err());
-        assert_eq!(SemanticVersionPrefix::V.to_string(), "v".to_string());
+        assert_eq!(SemVerPrefix::from_str("V"), Ok(SemVerPrefix::V));
+        assert_eq!(SemVerPrefix::from_str("v"), Ok(SemVerPrefix::V));
+        assert!(SemVerPrefix::from_str("RC").is_err());
+        assert_eq!(SemVerPrefix::V.to_string(), "v".to_string());
     }
 
     #[test]
     fn semantic_version_suffix_parsing() {
-        assert_eq!(
-            SemanticVersionSuffix::from_str("BETA"),
-            Ok(SemanticVersionSuffix::Beta)
-        );
-        assert_eq!(
-            SemanticVersionSuffix::from_str("b"),
-            Ok(SemanticVersionSuffix::B)
-        );
-        assert_eq!(
-            SemanticVersionSuffix::from_str("RC"),
-            Ok(SemanticVersionSuffix::RC)
-        );
-        assert_eq!(SemanticVersionSuffix::B.to_string(), "b");
-        assert_eq!(SemanticVersionSuffix::RC.to_string(), "RC");
+        assert_eq!(SemVerSuffix::from_str("BETA"), Ok(SemVerSuffix::Beta));
+        assert_eq!(SemVerSuffix::from_str("b"), Ok(SemVerSuffix::B));
+        assert_eq!(SemVerSuffix::from_str("RC"), Ok(SemVerSuffix::RC));
+        assert_eq!(SemVerSuffix::B.to_string(), "b");
+        assert_eq!(SemVerSuffix::RC.to_string(), "RC");
     }
 
     #[test]
@@ -171,9 +156,9 @@ mod tests {
     #[test]
     fn parse_valid_semantic_versions() {
         assert_eq!(
-            SemanticVersion::from_str("v1.2.3"),
-            Ok(SemanticVersion {
-                prefix: Some(SemanticVersionPrefix::V),
+            SemVer::from_str("v1.2.3"),
+            Ok(SemVer {
+                prefix: Some(SemVerPrefix::V),
                 major: 1,
                 minor: 2,
                 patch: 3,
@@ -181,21 +166,21 @@ mod tests {
             })
         );
         assert_eq!(
-            SemanticVersion::from_str("2.1.0-beta1"),
-            Ok(SemanticVersion {
+            SemVer::from_str("2.1.0-beta1"),
+            Ok(SemVer {
                 prefix: None,
                 major: 2,
                 minor: 1,
                 patch: 0,
-                suffix: Some(SemanticVersionPair {
-                    suffix: SemanticVersionSuffix::Beta,
+                suffix: Some(SemVerPair {
+                    suffix: SemVerSuffix::Beta,
                     version: Some(1)
                 })
             })
         );
         assert_eq!(
-            SemanticVersion::from_str("release-2022-02-09"),
-            Ok(SemanticVersion {
+            SemVer::from_str("release-2022-02-09"),
+            Ok(SemVer {
                 prefix: None,
                 major: 2022,
                 minor: 2,
@@ -204,40 +189,40 @@ mod tests {
             })
         );
         assert_eq!(
-            SemanticVersion::from_str("09-28-2023.1"),
-            Ok(SemanticVersion {
+            SemVer::from_str("09-28-2023.1"),
+            Ok(SemVer {
                 prefix: None,
                 major: 9,
                 minor: 28,
                 patch: 2023,
-                suffix: Some(SemanticVersionPair {
-                    suffix: SemanticVersionSuffix::P,
+                suffix: Some(SemVerPair {
+                    suffix: SemVerSuffix::P,
                     version: Some(1)
                 })
             })
         );
         assert_eq!(
-            SemanticVersion::from_str("2023-11-29-v1"),
-            Ok(SemanticVersion {
+            SemVer::from_str("2023-11-29-v1"),
+            Ok(SemVer {
                 prefix: None,
                 major: 2023,
                 minor: 11,
                 patch: 29,
-                suffix: Some(SemanticVersionPair {
-                    suffix: SemanticVersionSuffix::P,
+                suffix: Some(SemVerPair {
+                    suffix: SemVerSuffix::P,
                     version: Some(1)
                 })
             })
         );
         assert_eq!(
-            SemanticVersion::from_str("1.0.0-alpha.0"),
-            Ok(SemanticVersion {
+            SemVer::from_str("1.0.0-alpha.0"),
+            Ok(SemVer {
                 prefix: None,
                 major: 1,
                 minor: 0,
                 patch: 0,
-                suffix: Some(SemanticVersionPair {
-                    suffix: SemanticVersionSuffix::Alpha,
+                suffix: Some(SemVerPair {
+                    suffix: SemVerSuffix::Alpha,
                     version: Some(0)
                 })
             })
