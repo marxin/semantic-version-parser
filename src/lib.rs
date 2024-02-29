@@ -9,6 +9,12 @@ pub struct ComposerChecker {
     regex: Regex,
 }
 
+impl Default for ComposerChecker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ComposerChecker {
     pub fn new() -> Self {
         Self {
