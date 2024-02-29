@@ -1,8 +1,25 @@
 use chrono::prelude::*;
 use itertools::{self, Itertools};
+use regex::Regex;
 use std::fmt;
 use std::str::FromStr;
 use strum_macros::EnumString;
+
+pub struct ComposerChecker {
+    regex: Regex,
+}
+
+impl ComposerChecker {
+    pub fn new() -> Self {
+        Self {
+            regex: Regex::new(r"^v?(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(-(?P<suffix>dev|d|patch|p|alpha|a|beta|b|RC)(?P<suffix_version>\d+)?)?$").unwrap()
+        }
+    }
+
+    pub fn is_valid(&self, version: &str) -> bool {
+        self.regex.is_match(version)
+    }
+}
 
 #[derive(Debug, PartialEq, Eq, Clone, EnumString, strum_macros::Display)]
 #[strum(serialize_all = "lowercase", ascii_case_insensitive)]
@@ -189,6 +206,34 @@ mod tests {
     use super::*;
 
     #[test]
+    fn composer_valid_strings() {
+        let checker = ComposerChecker::new();
+        assert!(checker.is_valid("1.2.3"));
+        assert!(checker.is_valid("v1.2.3"));
+        assert!(checker.is_valid("v1.2.3"));
+
+        let official_examples = vec![
+            "1.0.0",
+            "1.0.2",
+            "1.1.0",
+            "0.2.5",
+            "1.0.0-dev",
+            "1.0.0-alpha3",
+            "1.0.0-beta2",
+            "1.0.0-RC5",
+            "v2.0.4-p1",
+        ];
+        for example in official_examples {
+            assert!(checker.is_valid(example));
+        }
+
+        assert!(!checker.is_valid("release1.2.3"));
+        assert!(!checker.is_valid("1.2.3.4"));
+        assert!(!checker.is_valid("1.2.3-dev.1"));
+        assert!(!checker.is_valid("1.2.3-foobar"));
+    }
+
+    #[test]
     fn semantic_version_prefix_parsing() {
         assert_eq!(SemVerPrefix::from_str("V"), Ok(SemVerPrefix::V));
         assert_eq!(SemVerPrefix::from_str("v"), Ok(SemVerPrefix::V));
@@ -318,6 +363,7 @@ mod tests {
 
     #[test]
     fn parse_all_provided_versions() {
+        let checker = ComposerChecker::new();
         let versions = std::fs::read_to_string("test-input/versions.txt").unwrap();
         for version in versions.split(',').map(|part| part.trim()) {
             if version == "list" {
@@ -326,7 +372,7 @@ mod tests {
             }
 
             let semver = SemVer::from_str(dbg!(version));
-            assert!(dbg!(semver).is_ok());
+            assert!(checker.is_valid(&dbg!(semver).unwrap().to_string()));
         }
     }
 
