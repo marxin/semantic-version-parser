@@ -1,5 +1,6 @@
 use chrono::prelude::*;
 use itertools::{self, Itertools};
+use std::fmt;
 use std::str::FromStr;
 use strum_macros::EnumString;
 
@@ -38,6 +39,31 @@ struct SemVer {
     minor: i32,
     patch: i32,
     suffix: Option<SemVerPair>,
+}
+
+impl fmt::Display for SemVer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}{}.{}.{}{}",
+            self.prefix
+                .as_ref()
+                .map_or_else(|| "".to_string(), |p| p.to_string()),
+            self.major,
+            self.minor,
+            self.patch,
+            self.suffix.as_ref().map_or_else(
+                || "".to_string(),
+                |suffix| format!(
+                    "-{}{}",
+                    suffix.suffix,
+                    suffix
+                        .version
+                        .map_or_else(|| "".to_string(), |v| v.to_string())
+                )
+            )
+        )
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -259,6 +285,12 @@ mod tests {
                 })
             })
         );
+    }
+
+    #[test]
+    fn output_format() {
+        let semver = SemVer::from_str("v2023-Nov-27-v1").unwrap();
+        assert_eq!(semver.to_string(), "v2023.11.27-p1");
     }
 
     #[test]
