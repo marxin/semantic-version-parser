@@ -181,7 +181,7 @@ impl FromStr for SemVer {
             version: suffix_version,
         });
 
-        // TODO
+        // FIXME: if any part is not a number, the following code will panic
         let integer_parts = parts
             .iter()
             .take(3)
