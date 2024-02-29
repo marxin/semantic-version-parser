@@ -33,11 +33,12 @@ enum SemVerPrefix {
     V,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, EnumString, strum_macros::Display)]
+#[derive(Debug, PartialEq, Eq, Clone, EnumString, strum_macros::Display, Default)]
 #[strum(serialize_all = "lowercase", ascii_case_insensitive)]
 enum SemVerSuffix {
     Dev,
     Patch,
+    #[default]
     P,
     Alpha,
     A,
@@ -172,7 +173,7 @@ impl FromStr for SemVer {
 
             // Make a default suffix name "P" if the is not any.
             if suffix_part.is_none() {
-                suffix_part = Some(SemVerSuffix::P);
+                suffix_part = Some(SemVerSuffix::default());
             }
         }
         let suffix = suffix_part.map(|sp| SemVerPair {
