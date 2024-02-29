@@ -363,7 +363,7 @@ mod tests {
     }
 
     #[test]
-    fn output_format() {
+    fn output_format_with_month_name() {
         let semver = SemVer::from_str("v2023-Nov-27-v1").unwrap();
         assert_eq!(semver.to_string(), "v2023.11.27-p1");
     }
