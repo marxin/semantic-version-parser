@@ -1,3 +1,4 @@
+use chrono::prelude::*;
 use itertools::{self, Itertools};
 use std::str::FromStr;
 use strum_macros::EnumString;
@@ -49,35 +50,45 @@ impl FromStr for SemVer {
         let mut parts = s
             .split(&['-', '_', '.'])
             .flat_map(split_alpha_and_number)
+            .map(|t| t.to_lowercase().to_string())
             .collect_vec();
         if parts.is_empty() {
             return Err(ParseSemVerError);
         }
 
         // 1) Parse the prefix component, if any.
-
-        let prefix = SemVerPrefix::from_str(parts[0]).ok();
+        let prefix = SemVerPrefix::from_str(&parts[0]).ok();
 
         // support: release-2022-02-09
         if prefix.is_some() || parts[0] == "release" {
             parts.remove(0);
         }
+        // support month name as the second component
+        if let Ok(month) = parts[1].parse::<Month>() {
+            parts[1] = month.number_from_month().to_string();
+        }
 
-        if parts.len() < 3 {
-            return Err(ParseSemVerError);
+        match parts.len() {
+            ..=1 => {
+                return Err(ParseSemVerError);
+            }
+            2 => {
+                parts.push("0".to_string());
+            }
+            _ => {}
         }
 
         // 2) Parse the suffix component, if any present.
         let mut suffix_part = None;
         if parts.len() >= 4 {
-            suffix_part = SemVerSuffix::from_str(parts[3]).ok();
+            suffix_part = SemVerSuffix::from_str(&parts[3]).ok();
             if suffix_part.is_some() {
                 parts.remove(3);
-            }
-
-            // support: 2023-11-29-v1
-            if parts[3] == "v" {
-                parts.remove(3);
+            } else {
+                // support: 2023-11-29-v1
+                if parts[3] == "v" {
+                    parts.remove(3);
+                }
             }
         }
 
@@ -154,6 +165,13 @@ mod tests {
     }
 
     #[test]
+    fn chrono_month_parsing() {
+        assert_eq!("Feb".parse::<Month>(), Ok(Month::February));
+        assert_eq!("Nov".parse::<Month>(), Ok(Month::November));
+        assert_eq!("nov".parse::<Month>(), Ok(Month::November));
+    }
+
+    #[test]
     fn parse_valid_semantic_versions() {
         assert_eq!(
             SemVer::from_str("v1.2.3"),
@@ -227,5 +245,28 @@ mod tests {
                 })
             })
         );
+
+        assert_eq!(
+            SemVer::from_str("2023-Nov-27-v1"),
+            Ok(SemVer {
+                prefix: None,
+                major: 2023,
+                minor: 11,
+                patch: 27,
+                suffix: Some(SemVerPair {
+                    suffix: SemVerSuffix::P,
+                    version: Some(1)
+                })
+            })
+        );
+    }
+
+    #[test]
+    fn parse_all_provided_versions() {
+        let versions = std::fs::read_to_string("test-input/versions.txt").unwrap();
+        for version in versions.split(',').map(|part| part.trim()) {
+            let semver = SemVer::from_str(dbg!(version));
+            assert!(dbg!(semver).is_ok());
+        }
     }
 }
