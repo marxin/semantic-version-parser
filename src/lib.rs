@@ -4,13 +4,13 @@ use std::fmt;
 use std::str::FromStr;
 use strum_macros::EnumString;
 
-#[derive(Debug, PartialEq, Eq, EnumString, strum_macros::Display)]
+#[derive(Debug, PartialEq, Eq, Clone, EnumString, strum_macros::Display)]
 #[strum(serialize_all = "lowercase", ascii_case_insensitive)]
 enum SemVerPrefix {
     V,
 }
 
-#[derive(Debug, PartialEq, Eq, EnumString, strum_macros::Display)]
+#[derive(Debug, PartialEq, Eq, Clone, EnumString, strum_macros::Display)]
 #[strum(serialize_all = "lowercase", ascii_case_insensitive)]
 enum SemVerSuffix {
     Dev,
@@ -26,19 +26,42 @@ enum SemVerSuffix {
 
 // FIXME: technically "dev44" should not be supported
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 struct SemVerPair {
     suffix: SemVerSuffix,
     version: Option<i32>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
-struct SemVer {
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct SemVer {
     prefix: Option<SemVerPrefix>,
     major: i32,
     minor: i32,
     patch: i32,
     suffix: Option<SemVerPair>,
+}
+
+impl SemVer {
+    pub fn increment_major(self) -> Self {
+        Self {
+            major: self.major + 1,
+            ..self
+        }
+    }
+
+    pub fn increment_minor(self) -> Self {
+        Self {
+            minor: self.minor + 1,
+            ..self
+        }
+    }
+
+    pub fn increment_patch(self) -> Self {
+        Self {
+            patch: self.patch + 1,
+            ..self
+        }
+    }
 }
 
 impl fmt::Display for SemVer {
@@ -67,7 +90,7 @@ impl fmt::Display for SemVer {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct ParseSemVerError;
+pub struct ParseSemVerError;
 
 impl FromStr for SemVer {
     type Err = ParseSemVerError;
@@ -300,5 +323,22 @@ mod tests {
             let semver = SemVer::from_str(dbg!(version));
             assert!(dbg!(semver).is_ok());
         }
+    }
+
+    #[test]
+    fn increment_version() {
+        let semver = SemVer::from_str("v2023-Nov-27-v1").unwrap();
+        assert_eq!(
+            semver.to_owned().increment_major().to_string(),
+            "v2024.11.27-p1"
+        );
+        assert_eq!(
+            semver.to_owned().increment_minor().to_string(),
+            "v2023.12.27-p1"
+        );
+        assert_eq!(
+            semver.to_owned().increment_patch().to_string(),
+            "v2023.11.28-p1"
+        );
     }
 }
