@@ -320,6 +320,11 @@ mod tests {
     fn parse_all_provided_versions() {
         let versions = std::fs::read_to_string("test-input/versions.txt").unwrap();
         for version in versions.split(',').map(|part| part.trim()) {
+            if version == "list" {
+                // ignored input value
+                continue;
+            }
+
             let semver = SemVer::from_str(dbg!(version));
             assert!(dbg!(semver).is_ok());
         }
