@@ -96,8 +96,6 @@ impl FromStr for SemanticVersion {
             version: suffix_version,
         });
 
-        println!("{parts:?}, prefix={prefix:?}, suffix={suffix:?}");
-
         // TODO
         let integer_parts = parts
             .iter()
