@@ -2,6 +2,8 @@ use chrono::prelude::*;
 use itertools::{self, Itertools};
 use regex::Regex;
 use std::fmt;
+use std::num::ParseIntError;
+use std::ops::Add;
 use std::str::FromStr;
 use strum_macros::EnumString;
 
@@ -56,12 +58,63 @@ struct SemVerPair {
     version: Option<i32>,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+struct ZeroPaddedInt {
+    value: u32,
+    width: usize,
+}
+
+impl ZeroPaddedInt {
+    #[allow(dead_code)]
+    fn new(value: u32, width: usize) -> Self {
+        Self { value, width }
+    }
+}
+
+impl From<u32> for ZeroPaddedInt {
+    fn from(value: u32) -> Self {
+        ZeroPaddedInt {
+            value,
+            width: value.to_string().chars().count(),
+        }
+    }
+}
+
+impl FromStr for ZeroPaddedInt {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let value = s.parse::<u32>()?;
+        Ok(ZeroPaddedInt {
+            value,
+            width: s.chars().count(),
+        })
+    }
+}
+
+impl Add<u32> for ZeroPaddedInt {
+    type Output = Self;
+
+    fn add(self, rhs: u32) -> Self::Output {
+        Self {
+            value: self.value + rhs,
+            ..self
+        }
+    }
+}
+
+impl fmt::Display for ZeroPaddedInt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:0width$}", self.value, width = self.width)
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SemVer {
     prefix: Option<SemVerPrefix>,
-    major: i32,
-    minor: i32,
-    patch: i32,
+    major: ZeroPaddedInt,
+    minor: ZeroPaddedInt,
+    patch: ZeroPaddedInt,
     suffix: Option<SemVerPair>,
 }
 
@@ -185,7 +238,7 @@ impl FromStr for SemVer {
         let integer_parts = parts
             .iter()
             .take(3)
-            .map(|p| p.parse::<i32>().unwrap())
+            .map(|p| ZeroPaddedInt::from_str(p).unwrap())
             .collect_vec();
 
         Ok(SemVer {
@@ -279,9 +332,9 @@ mod tests {
             SemVer::from_str("v1.2.3"),
             Ok(SemVer {
                 prefix: Some(SemVerPrefix::V),
-                major: 1,
-                minor: 2,
-                patch: 3,
+                major: ZeroPaddedInt::from(1),
+                minor: ZeroPaddedInt::from(2),
+                patch: ZeroPaddedInt::from(3),
                 suffix: None
             })
         );
@@ -289,9 +342,9 @@ mod tests {
             SemVer::from_str("2.1.0-beta1"),
             Ok(SemVer {
                 prefix: None,
-                major: 2,
-                minor: 1,
-                patch: 0,
+                major: ZeroPaddedInt::from(2),
+                minor: ZeroPaddedInt::from(1),
+                patch: ZeroPaddedInt::from(0),
                 suffix: Some(SemVerPair {
                     suffix: SemVerSuffix::Beta,
                     version: Some(1)
@@ -302,9 +355,9 @@ mod tests {
             SemVer::from_str("release-2022-02-09"),
             Ok(SemVer {
                 prefix: None,
-                major: 2022,
-                minor: 2,
-                patch: 9,
+                major: ZeroPaddedInt::from(2022),
+                minor: ZeroPaddedInt::new(2, 2),
+                patch: ZeroPaddedInt::new(9, 2),
                 suffix: None
             })
         );
@@ -312,9 +365,9 @@ mod tests {
             SemVer::from_str("09-28-2023.1"),
             Ok(SemVer {
                 prefix: None,
-                major: 9,
-                minor: 28,
-                patch: 2023,
+                major: ZeroPaddedInt::new(9, 2),
+                minor: ZeroPaddedInt::from(28),
+                patch: ZeroPaddedInt::from(2023),
                 suffix: Some(SemVerPair {
                     suffix: SemVerSuffix::P,
                     version: Some(1)
@@ -325,9 +378,9 @@ mod tests {
             SemVer::from_str("2023-11-29-v1"),
             Ok(SemVer {
                 prefix: None,
-                major: 2023,
-                minor: 11,
-                patch: 29,
+                major: ZeroPaddedInt::from(2023),
+                minor: ZeroPaddedInt::from(11),
+                patch: ZeroPaddedInt::from(29),
                 suffix: Some(SemVerPair {
                     suffix: SemVerSuffix::P,
                     version: Some(1)
@@ -338,9 +391,9 @@ mod tests {
             SemVer::from_str("1.0.0-alpha.0"),
             Ok(SemVer {
                 prefix: None,
-                major: 1,
-                minor: 0,
-                patch: 0,
+                major: ZeroPaddedInt::from(1),
+                minor: ZeroPaddedInt::from(0),
+                patch: ZeroPaddedInt::from(0),
                 suffix: Some(SemVerPair {
                     suffix: SemVerSuffix::Alpha,
                     version: Some(0)
@@ -352,9 +405,9 @@ mod tests {
             SemVer::from_str("2023-Nov-27-v1"),
             Ok(SemVer {
                 prefix: None,
-                major: 2023,
-                minor: 11,
-                patch: 27,
+                major: ZeroPaddedInt::from(2023),
+                minor: ZeroPaddedInt::from(11),
+                patch: ZeroPaddedInt::from(27),
                 suffix: Some(SemVerPair {
                     suffix: SemVerSuffix::P,
                     version: Some(1)
@@ -386,18 +439,18 @@ mod tests {
 
     #[test]
     fn increment_version() {
-        let semver = SemVer::from_str("v2023-Nov-27-v1").unwrap();
+        let semver = SemVer::from_str("v2023-Nov-0027-v1").unwrap();
         assert_eq!(
             semver.to_owned().increment_major().to_string(),
-            "v2024.11.27-p1"
+            "v2024.11.0027-p1"
         );
         assert_eq!(
             semver.to_owned().increment_minor().to_string(),
-            "v2023.12.27-p1"
+            "v2023.12.0027-p1"
         );
         assert_eq!(
             semver.to_owned().increment_patch().to_string(),
-            "v2023.11.28-p1"
+            "v2023.11.0028-p1"
         );
     }
 }
