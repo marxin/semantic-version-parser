@@ -14,7 +14,11 @@
 //! assert_eq!("2.2.3-beta5", semver.increment_major().to_string());
 //! ```
 //!
-//! The library also contains a PHP composer checker `ComposerChecker` one can use to verify if the output string version
+//! # PHP Composer Version Format
+//! The format version is covered by the official [JSON Schema](https://getcomposer.org/schema.json), however,
+//! the provided regular expression is bad and accepts many more invalid version strings.
+//!
+//! The library also contains a PHP composer checker `ComposerChecker`, one can use to verify if the output string version
 //! is really supported.
 //!
 //! ```
