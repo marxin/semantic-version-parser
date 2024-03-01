@@ -1,3 +1,31 @@
+//! # semantic-version-parser
+//!
+//! A library providing parsing capability for various version string formats (e.g. `2.3.0-alpha.1`).
+//! The parsed `SemVer` type provides capability for displaying the version in [PHP composer format](https://getcomposer.org/doc/04-schema.md#version)
+//! and one can use the provided methods for incrementing of *major*, *minor* and the *patch* parts of the version.
+//!
+//! # Example
+//!
+//! ```
+//! use std::str::FromStr;
+//! use semantic_version_parser::SemVer;
+//!
+//! let semver = SemVer::from_str("1.2.3.beta.5").unwrap();
+//! assert_eq!("2.2.3-beta5", semver.increment_major().to_string());
+//! ```
+//!
+//! The library also contains a PHP composer checker `ComposerChecker` one can use to verify if the output string version
+//! is really supported.
+//!
+//! ```
+//! use semantic_version_parser::ComposerChecker;
+//!
+//! let checker = ComposerChecker::new();
+//! assert!(checker.is_valid("2.2.3-beta5"));
+//! assert!(!checker.is_valid("2.2.3.beta.5"));
+//! assert!(!checker.is_valid("1.0.0.2"));
+//! ```
+
 use chrono::prelude::*;
 use itertools::{self, Itertools};
 use regex::Regex;
