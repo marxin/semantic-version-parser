@@ -445,6 +445,12 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn parse_invalid_semantic_versions() {
+        assert!(SemVer::from_str("foo.bar.baz").is_err());
+    }
+
+    #[test]
     fn output_format_with_month_name() {
         let semver = SemVer::from_str("v2023-Nov-27-v1").unwrap();
         assert_eq!(semver.to_string(), "v2023.11.27-p1");
