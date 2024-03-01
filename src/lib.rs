@@ -45,6 +45,7 @@ impl Default for ComposerChecker {
     }
 }
 
+// FIXME: The regex should reject the following suffix: `dev123`
 impl ComposerChecker {
     pub fn new() -> Self {
         Self {
