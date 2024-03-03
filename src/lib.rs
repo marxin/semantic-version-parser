@@ -181,18 +181,18 @@ impl fmt::Display for SemVer {
             "{}{}.{}.{}{}",
             self.prefix
                 .as_ref()
-                .map_or_else(|| "".to_string(), |p| p.to_string()),
+                .map_or("".to_string(), |p| p.to_string()),
             self.major,
             self.minor,
             self.patch,
-            self.suffix.as_ref().map_or_else(
-                || "".to_string(),
+            self.suffix.as_ref().map_or(
+                "".to_string(),
                 |suffix| format!(
                     "-{}{}",
                     suffix.suffix,
                     suffix
                         .version
-                        .map_or_else(|| "".to_string(), |v| v.to_string())
+                        .map_or("".to_string(), |v| v.to_string())
                 )
             )
         )
